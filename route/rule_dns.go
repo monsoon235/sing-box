@@ -285,6 +285,10 @@ func (r *DefaultDNSRule) MatchAddressLimit(metadata *adapter.InboundContext) boo
 	return r.abstractDefaultRule.Match(metadata)
 }
 
+func (r *DefaultDNSRule) ContainsDestinationIPCIDRRules() bool {
+	return false
+}
+
 var _ adapter.DNSRule = (*LogicalDNSRule)(nil)
 
 type LogicalDNSRule struct {
@@ -377,4 +381,8 @@ func (r *LogicalDNSRule) MatchAddressLimit(metadata *adapter.InboundContext) boo
 			return it.(adapter.DNSRule).MatchAddressLimit(metadata)
 		}) != r.invert
 	}
+}
+
+func (r *LogicalDNSRule) ContainsDestinationIPCIDRRules() bool {
+	return false
 }

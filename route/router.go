@@ -99,6 +99,7 @@ type Router struct {
 	needPackageManager                 bool
 	wifiState                          adapter.WIFIState
 	started                            bool
+	domainStrategy                     option.RouteDomainStrategy
 }
 
 func NewRouter(
@@ -136,6 +137,7 @@ func NewRouter(
 		needPackageManager: common.Any(inbounds, func(inbound option.Inbound) bool {
 			return len(inbound.TunOptions.IncludePackage) > 0 || len(inbound.TunOptions.ExcludePackage) > 0
 		}),
+		domainStrategy: options.DomainStrategy,
 	}
 	router.dnsClient = dns.NewClient(dns.ClientOptions{
 		DisableCache:     dnsOptions.DNSClientOptions.DisableCache,
@@ -1162,8 +1164,23 @@ func (r *Router) match0(ctx context.Context, metadata *adapter.InboundContext, d
 			metadata.ProcessInfo = processInfo
 		}
 	}
+	isResolved := false
+	containsDestinationIPCIDRRule := false
+	first_pass := true
+match:
 	for i, rule := range r.rules {
 		metadata.ResetRuleCache()
+		if !containsDestinationIPCIDRRule && rule.ContainsDestinationIPCIDRRules() {
+			containsDestinationIPCIDRRule = true
+		}
+		if (containsDestinationIPCIDRRule && r.domainStrategy == option.RouteDomainStrategyIPOnDemand && !isResolved && metadata.Destination.IsFqdn() && len(metadata.DestinationAddresses) == 0) || (!first_pass && !isResolved) {
+			addresses, err := r.Lookup(adapter.WithContext(ctx, metadata), metadata.Destination.Fqdn, dns.DomainStrategy(metadata.InboundOptions.DomainStrategy))
+			r.dnsLogger.DebugContext(ctx, "resolved [", strings.Join(F.MapToString(addresses), " "), "]")
+			if err == nil {
+				metadata.IPsForRouting = addresses
+				isResolved = true
+			}
+		}
 		if rule.Match(metadata) {
 			detour := rule.Outbound()
 			r.logger.DebugContext(ctx, "match[", i, "] ", rule.String(), " => ", detour)
@@ -1172,6 +1189,11 @@ func (r *Router) match0(ctx context.Context, metadata *adapter.InboundContext, d
 			}
 			r.logger.ErrorContext(ctx, "outbound not found: ", detour)
 		}
+	}
+	if first_pass && containsDestinationIPCIDRRule && r.domainStrategy == option.RouteDomainStrategyIPIfNonMatch && metadata.Destination.IsFqdn() && len(metadata.DestinationAddresses) == 0 {
+		first_pass = false
+		r.logger.DebugContext(ctx, "start second matching pass")
+		goto match
 	}
 	return nil, defaultOutbound
 }
