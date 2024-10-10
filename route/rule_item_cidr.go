@@ -84,6 +84,11 @@ func (r *IPCIDRItem) Match(metadata *adapter.InboundContext) bool {
 					return true
 				}
 			}
+			for _, address := range metadata.IPsForRouting {
+				if r.ipSet.Contains(address) {
+					return true
+				}
+			}
 		}
 	}
 	return false
