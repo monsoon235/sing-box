@@ -225,6 +225,22 @@ func NewDefaultRule(router adapter.Router, logger log.ContextLogger, options opt
 	return rule, nil
 }
 
+func (r DefaultRule) ContainsDestinationIPCIDRRules() bool {
+	if len(r.destinationIPCIDRItems) > 0 {
+		return true
+	}
+	for _, rawRule := range r.items {
+		ruleSet, isRuleSet := rawRule.(*RuleSetItem)
+		if !isRuleSet {
+			continue
+		}
+		if ruleSet.ContainsDestinationIPCIDRRule() {
+			return true
+		}
+	}
+	return false
+}
+
 var _ adapter.Rule = (*LogicalRule)(nil)
 
 type LogicalRule struct {
@@ -255,4 +271,20 @@ func NewLogicalRule(router adapter.Router, logger log.ContextLogger, options opt
 		r.rules[i] = rule
 	}
 	return r, nil
+}
+
+func (r LogicalRule) ContainsDestinationIPCIDRRules() bool {
+	for _, rawRule := range r.rules {
+		switch rule := rawRule.(type) {
+		case *DefaultRule:
+			if rule.ContainsDestinationIPCIDRRules() {
+				return true
+			}
+		case *LogicalRule:
+			if rule.ContainsDestinationIPCIDRRules() {
+				return true
+			}
+		}
+	}
+	return false
 }
