@@ -57,6 +57,11 @@ func (r *GeoIPItem) Match(metadata *adapter.InboundContext) bool {
 			return true
 		}
 	}
+	for _, ip := range metadata.IPsForRouting {
+		if r.match(metadata, ip) {
+			return true
+		}
+	}
 	return false
 }
 

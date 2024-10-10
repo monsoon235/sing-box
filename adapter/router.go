@@ -89,6 +89,7 @@ type Rule interface {
 	Type() string
 	UpdateGeosite() error
 	Outbound() string
+	ContainsDestinationIPCIDRRules() bool
 }
 
 type DNSRule interface {
