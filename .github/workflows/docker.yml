@@ -10,7 +10,7 @@ on:
         description: "The tag version you want to build"
 
 env:
-  REGISTRY_IMAGE: ghcr.io/sagernet/sing-box
+  REGISTRY_IMAGE: ghcr.io/monsoon235/sing-box
 
 jobs:
   build:
@@ -99,11 +99,7 @@ jobs:
           fi
           echo "ref=$ref"
           echo "ref=$ref" >> $GITHUB_OUTPUT
-          if [[ $ref == *"-"* ]]; then
-            latest=latest-beta
-          else
-            latest=latest
-          fi
+          latest=latest
           echo "latest=$latest"
           echo "latest=$latest" >> $GITHUB_OUTPUT
       - name: Download digests
