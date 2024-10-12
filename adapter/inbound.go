@@ -58,6 +58,10 @@ type InboundContext struct {
 	DestinationPortMatch         bool
 	DidMatch                     bool
 	IgnoreDestinationIPCIDRMatch bool
+
+	// resolved IPs during routing
+
+	IPsForRouting []netip.Addr
 }
 
 func (c *InboundContext) ResetRuleCache() {
